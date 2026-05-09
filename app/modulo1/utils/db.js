@@ -55,3 +55,35 @@ export const createRegistroMensual = async (empresaId, data) => {
   // Asegurarse de que la respuesta contiene el registro insertado
   return newRegistro ? newRegistro[0] : null;
 };
+
+// Obtener registros mensuales de una empresa específica
+export const getRegistrosMensualesByEmpresa = async (empresaId) => {
+  const { data, error } = await supabase
+    .from("registros_mensuales")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .order("mes", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching registros mensuales:", error);
+    return [];
+  }
+
+  return data;
+};
+
+// Obtener empresa por ID
+export const getEmpresaById = async (empresaId) => {
+  const { data, error } = await supabase
+    .from("empresas")
+    .select("*")
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching empresa:", error);
+    return null;
+  }
+
+  return data;
+};
