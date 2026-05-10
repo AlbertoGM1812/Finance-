@@ -3,6 +3,8 @@
 "use client";
 import supabase from "@/app/lib/supabase";
 import React, { useEffect, useMemo, useState } from "react";
+
+
 import {
   AlertCircle,
   BarChart3,
@@ -232,6 +234,9 @@ export function PanelControlSupuestos({
   fechaFin,
   registros,
   registrosActivos,
+  simulacionIdActiva,
+  setSimulacionIdActiva,
+  onSimulacionGuardada,
 }: {
   supuestos: SupuestosDeterministasController;
   nombreSimulacion: string;
@@ -240,6 +245,9 @@ export function PanelControlSupuestos({
   fechaFin: string;
   registros: RegistroMensual[];
   registrosActivos: Set<number>;
+  simulacionIdActiva: number | null;
+  setSimulacionIdActiva: (id: number | null) => void;
+  onSimulacionGuardada?: () => void;
 }) {
   const {
     horizonte,
@@ -256,75 +264,74 @@ export function PanelControlSupuestos({
   const [guardandoSimulacion, setGuardandoSimulacion] = useState(false);
   const [mensajeGuardado, setMensajeGuardado] = useState<string | null>(null);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
-  const [simulacionIdGuardada, setSimulacionIdGuardada] = useState<number | null>(
-  null
-);
 
   async function guardarSimulacion() {
-  try {
-    setGuardandoSimulacion(true);
-    setMensajeGuardado(null);
-    setErrorGuardado(null);
+    try {
+      setGuardandoSimulacion(true);
+      setMensajeGuardado(null);
+      setErrorGuardado(null);
 
-    const empresaId = obtenerCookieSupuestos("empresa_id");
+      const empresaId = obtenerCookieSupuestos("empresa_id");
 
-    if (!empresaId) {
-      setErrorGuardado("No se encontró empresa_id en la cookie.");
-      return;
-    }
+      if (!empresaId) {
+        setErrorGuardado("No se encontró empresa_id en la cookie.");
+        return;
+      }
 
-    if (!nombreSimulacion.trim()) {
-      setErrorGuardado("Debes escribir un nombre para la simulación.");
-      return;
-    }
+      if (!nombreSimulacion.trim()) {
+        setErrorGuardado("Debes escribir un nombre para la simulación.");
+        return;
+      }
 
-    const periodosTomados = registros.map((registro) => [
-      registro.registro_id,
-      registrosActivos.has(registro.registro_id),
-    ]);
+      const periodosTomados = registros.map((registro) => [
+        registro.registro_id,
+        registrosActivos.has(registro.registro_id),
+      ]);
 
-    const simulacionPayload = {
-      empresa_id: Number(empresaId),
-      nombre_simulacion: nombreSimulacion.trim(),
-      fecha_inicio: convertirMesAFechaInicioSupuestos(fechaInicio),
-      fecha_fin: convertirMesAFechaFinSupuestos(fechaFin),
-      periodos_tomados: JSON.stringify(periodosTomados),
-      descripcion: descripcionSimulacion.trim(),
-    };
+      const simulacionPayload = {
+        empresa_id: Number(empresaId),
+        nombre_simulacion: nombreSimulacion.trim(),
+        fecha_inicio: convertirMesAFechaInicioSupuestos(fechaInicio),
+        fecha_fin: convertirMesAFechaFinSupuestos(fechaFin),
+        periodos_tomados: JSON.stringify(periodosTomados),
+        descripcion: descripcionSimulacion.trim(),
+      };
 
-    if (simulacionIdGuardada) {
-      const { error } = await supabase
+      if (simulacionIdActiva) {
+        const { error } = await supabase
+          .from("simulaciones")
+          .update(simulacionPayload)
+          .eq("simulacion_id", simulacionIdActiva);
+
+        if (error) {
+          throw error;
+        }
+
+        setMensajeGuardado("Simulación actualizada correctamente.");
+        onSimulacionGuardada?.();
+        return;
+      }
+
+      const { data, error } = await supabase
         .from("simulaciones")
-        .update(simulacionPayload)
-        .eq("simulacion_id", simulacionIdGuardada);
+        .insert(simulacionPayload)
+        .select("simulacion_id")
+        .single();
 
       if (error) {
         throw error;
       }
 
-      setMensajeGuardado("Simulación actualizada correctamente.");
-      return;
+      setSimulacionIdActiva(data.simulacion_id);
+      setMensajeGuardado("Simulación guardada correctamente.");
+      onSimulacionGuardada?.();
+    } catch (error) {
+      console.error(error);
+      setErrorGuardado("No se pudo guardar la simulación.");
+    } finally {
+      setGuardandoSimulacion(false);
     }
-
-    const { data, error } = await supabase
-      .from("simulaciones")
-      .insert(simulacionPayload)
-      .select("simulacion_id")
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    setSimulacionIdGuardada(data.simulacion_id);
-    setMensajeGuardado("Simulación guardada correctamente.");
-  } catch (error) {
-    console.error(error);
-    setErrorGuardado("No se pudo guardar la simulación.");
-  } finally {
-    setGuardandoSimulacion(false);
   }
-}
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -476,7 +483,11 @@ export function PanelControlSupuestos({
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-semibold text-white shadow-sm transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save size={18} />
-            {guardandoSimulacion ? "Guardando..." : "Guardar simulación"}
+            {guardandoSimulacion
+              ? "Guardando..."
+              : simulacionIdActiva
+              ? "Actualizar simulación"
+              : "Guardar simulación"}
           </button>
 
           {mensajeGuardado && (
@@ -1165,3 +1176,4 @@ function convertirMesAFechaFinSupuestos(mes: string) {
 
   return `${mes}-${String(ultimoDia).padStart(2, "0")}`;
 }
+

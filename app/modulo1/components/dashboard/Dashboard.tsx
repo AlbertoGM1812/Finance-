@@ -252,7 +252,7 @@ const Dashboard = () => {
 
           <button
             className="dashboard-button secondary"
-            onClick={() => router.push("/modulo1/centro-simulacion")}
+            onClick={() => router.push("/modulo2/simulaciones")}
           >
             Centro de simulación
           </button>

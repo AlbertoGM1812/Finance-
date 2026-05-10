@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, ChevronDown, Database, X } from "lucide-react";
 import supabase from "@/app/lib/supabase";
-
 
 export type RegistroMensual = {
   registro_id: number;
@@ -28,11 +27,16 @@ export function useDatosSimulacion() {
   const [cargandoDatos, setCargandoDatos] = useState(false);
   const [errorDatos, setErrorDatos] = useState<string | null>(null);
 
+  const periodosPendientesRef = useRef<Map<number, boolean> | null>(null);
+
   useEffect(() => {
-    cargarRegistrosPorFecha();
+    cargarRegistrosPorFecha(fechaInicio, fechaFin);
   }, [fechaInicio, fechaFin]);
 
-  async function cargarRegistrosPorFecha() {
+  async function cargarRegistrosPorFecha(
+    rangoInicio = fechaInicio,
+    rangoFin = fechaFin
+  ) {
     try {
       setCargandoDatos(true);
       setErrorDatos(null);
@@ -46,15 +50,15 @@ export function useDatosSimulacion() {
         return;
       }
 
-      if (fechaInicio > fechaFin) {
+      if (rangoInicio > rangoFin) {
         setRegistros([]);
         setRegistrosActivos(new Set());
         setErrorDatos("El mes inicial no puede ser mayor que el mes final.");
         return;
       }
 
-      const fechaInicioConsulta = convertirMesAFechaInicio(fechaInicio);
-      const fechaFinConsulta = convertirMesAFechaFin(fechaFin);
+      const fechaInicioConsulta = convertirMesAFechaInicio(rangoInicio);
+      const fechaFinConsulta = convertirMesAFechaFin(rangoFin);
 
       const { data, error } = await supabase
         .from("registros_mensuales")
@@ -74,15 +78,57 @@ export function useDatosSimulacion() {
 
       setRegistros(registrosCargados);
 
-      setRegistrosActivos(
-        new Set(registrosCargados.map((registro) => registro.registro_id))
-      );
+      const periodosPendientes = periodosPendientesRef.current;
+
+      if (periodosPendientes) {
+        const idsActivos = registrosCargados
+          .filter(
+            (registro) =>
+              periodosPendientes.get(registro.registro_id) === true
+          )
+          .map((registro) => registro.registro_id);
+
+        setRegistrosActivos(new Set(idsActivos));
+        periodosPendientesRef.current = null;
+      } else {
+        setRegistrosActivos(
+          new Set(registrosCargados.map((registro) => registro.registro_id))
+        );
+      }
     } catch (error) {
       console.error(error);
       setErrorDatos("No se pudieron cargar los registros mensuales.");
     } finally {
       setCargandoDatos(false);
     }
+  }
+
+  function cargarSimulacionGuardada({
+    fechaInicioGuardada,
+    fechaFinGuardada,
+    periodosTomados,
+  }: {
+    fechaInicioGuardada: string;
+    fechaFinGuardada: string;
+    periodosTomados: [number, boolean][];
+  }) {
+    const nuevoMesInicio = convertirFechaAMes(fechaInicioGuardada);
+    const nuevoMesFin = convertirFechaAMes(fechaFinGuardada);
+
+    periodosPendientesRef.current = new Map(
+      periodosTomados.map(([registroId, activo]) => [
+        Number(registroId),
+        Boolean(activo),
+      ])
+    );
+
+    if (nuevoMesInicio === fechaInicio && nuevoMesFin === fechaFin) {
+      cargarRegistrosPorFecha(nuevoMesInicio, nuevoMesFin);
+      return;
+    }
+
+    setFechaInicio(nuevoMesInicio);
+    setFechaFin(nuevoMesFin);
   }
 
   function alternarRegistro(registroId: number) {
@@ -152,6 +198,7 @@ export function useDatosSimulacion() {
     alternarRegistro,
     activarTodosLosRegistros,
     desactivarTodosLosRegistros,
+    cargarSimulacionGuardada,
   };
 }
 
@@ -376,9 +423,7 @@ export function DataSelectionModal({
 
                 <tbody className="divide-y divide-slate-200">
                   {registros.map((registro) => {
-                    const activo = registrosActivos.has(
-                      registro.registro_id
-                    );
+                    const activo = registrosActivos.has(registro.registro_id);
 
                     return (
                       <tr
@@ -489,6 +534,11 @@ function convertirMesAFechaFin(mes: string) {
   const ultimoDia = new Date(anio, mesNumero, 0).getDate();
 
   return `${mes}-${String(ultimoDia).padStart(2, "0")}`;
+}
+
+function convertirFechaAMes(fecha: string) {
+  const fechaLimpia = fecha.includes("T") ? fecha.split("T")[0] : fecha;
+  return fechaLimpia.slice(0, 7);
 }
 
 function formatoMes(mes: string) {
