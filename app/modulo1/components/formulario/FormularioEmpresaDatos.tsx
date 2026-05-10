@@ -23,10 +23,17 @@ const FormularioEmpresaDatos = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
+<<<<<<< HEAD
     setEmpresaData((prev) => ({
       ...prev,
       [name]: value,
     }));
+=======
+    setEmpresaData({
+      ...empresaData,
+      [name]: value,
+    });
+>>>>>>> 4b02b1858748c6290578beef5af6886588633c44
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -42,8 +49,28 @@ const FormularioEmpresaDatos = () => {
 
       console.log('Respuesta de la creación de empresa:', response);
 
+<<<<<<< HEAD
       if (!response || !response.empresa_id) {
         console.error('Respuesta inválida al crear empresa:', response);
+=======
+      if (response && Object.keys(response).length > 0) {
+        const empresaId = response.empresa_id;
+
+        console.log('empresa_id obtenida:', empresaId);
+
+        Cookies.set('empresa_id', empresaId, {
+          expires: 7,
+          path: '/',
+        });
+
+        const cookieValue = Cookies.get('empresa_id');
+        console.log("Valor de la cookie 'empresa_id':", cookieValue);
+
+        alert('Empresa registrada con éxito');
+
+        router.push('/modulo1/dashboard');
+      } else {
+>>>>>>> 4b02b1858748c6290578beef5af6886588633c44
         alert('Hubo un error al registrar la empresa');
         return;
       }
