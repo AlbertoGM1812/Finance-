@@ -1,25 +1,31 @@
 // app/modulo1/components/formulario/FormularioEmpresaDatos.tsx
 
-'use client';  // Directiva para Client Component
+'use client';
 
 import React, { useState } from 'react';
-import { createEmpresa } from '../../utils/db'; // Asegúrate de que la ruta al archivo db.js sea correcta
-import Cookies from 'js-cookie';  // Importar js-cookie
+import { useRouter } from 'next/navigation';
+import { createEmpresa } from '../../utils/db';
+import Cookies from 'js-cookie';
 
 const FormularioEmpresaDatos = () => {
+  const router = useRouter();
+
   const [empresaData, setEmpresaData] = useState({
     nombre: '',
     rfc: '',
     fecha_creacion: '',
     sector: '',
-    direccion: ''
+    direccion: '',
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setEmpresaData({
       ...empresaData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -27,39 +33,43 @@ const FormularioEmpresaDatos = () => {
     e.preventDefault();
 
     try {
+      setIsSubmitting(true);
+
       const response = await createEmpresa(empresaData);
 
-      // Depuración: Verifica si la respuesta tiene empresa_id
       console.log('Respuesta de la creación de empresa:', response);
 
-      console.log("Longitud de la respuesta:", response ? Object.keys(response).length : 'No response');
+      if (response && Object.keys(response).length > 0) {
+        const empresaId = response.empresa_id;
 
-      if (response && response ? Object.keys(response).length > 0 : false) {
-        const empresaId = response.empresa_id;  // Accediendo correctamente al `empresa_id`
+        console.log('empresa_id obtenida:', empresaId);
 
-        // Depuración: Verifica el valor de empresaId
-        console.log("empresa_id obtenida:", empresaId);
+        Cookies.set('empresa_id', empresaId, {
+          expires: 7,
+          path: '/',
+        });
 
-        // Establecer la cookie con el empresa_id
-        Cookies.set('empresa_id', empresaId, { expires: 7, path: '' });
-
-        // Depuración: Verifica si la cookie se estableció correctamente
         const cookieValue = Cookies.get('empresa_id');
         console.log("Valor de la cookie 'empresa_id':", cookieValue);
 
         alert('Empresa registrada con éxito');
+
+        router.push('/modulo1/dashboard');
       } else {
         alert('Hubo un error al registrar la empresa');
       }
     } catch (error) {
       console.error('Error en la solicitud:', error);
       alert('Hubo un error al registrar la empresa');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="form-container">
       <h1 className="form-title">Registro de Empresa</h1>
+
       <form onSubmit={handleSubmit} className="empresa-form">
         <div className="form-field">
           <label htmlFor="nombre">Nombre:</label>
@@ -72,6 +82,7 @@ const FormularioEmpresaDatos = () => {
             required
           />
         </div>
+
         <div className="form-field">
           <label htmlFor="rfc">RFC:</label>
           <input
@@ -83,6 +94,7 @@ const FormularioEmpresaDatos = () => {
             required
           />
         </div>
+
         <div className="form-field">
           <label htmlFor="fecha_creacion">Fecha de Creación:</label>
           <input
@@ -94,6 +106,7 @@ const FormularioEmpresaDatos = () => {
             required
           />
         </div>
+
         <div className="form-field">
           <label htmlFor="sector">Sector:</label>
           <input
@@ -105,6 +118,7 @@ const FormularioEmpresaDatos = () => {
             required
           />
         </div>
+
         <div className="form-field">
           <label htmlFor="direccion">Dirección:</label>
           <input
@@ -116,7 +130,10 @@ const FormularioEmpresaDatos = () => {
             required
           />
         </div>
-        <button type="submit" className="submit-button">Registrar Empresa</button>
+
+        <button type="submit" className="submit-button" disabled={isSubmitting}>
+          {isSubmitting ? 'Registrando...' : 'Registrar Empresa'}
+        </button>
       </form>
     </div>
   );

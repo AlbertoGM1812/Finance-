@@ -171,37 +171,65 @@ const Dashboard = () => {
     },
   };
 
-  const datosOperacionChart = {
-    labels,
-    datasets: [
-      {
-        label: "Ventas",
-        data: ventas,
-        tension: 0.3,
-      },
-      {
-        label: "Costos",
-        data: costos,
-        tension: 0.3,
-      },
-      {
-        label: "Gastos",
-        data: gastos,
-        tension: 0.3,
-      },
-    ],
-  };
+ const datosOperacionChart = {
+  labels,
+  datasets: [
+    {
+      label: "Ventas",
+      data: ventas,
+      borderColor: "#22c55e", // verde
+      backgroundColor: "#22c55e",
+      pointBackgroundColor: "#22c55e",
+      pointBorderColor: "#22c55e",
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+    },
+    {
+      label: "Costos",
+      data: costos,
+      borderColor: "#f97316", // naranja
+      backgroundColor: "#f97316",
+      pointBackgroundColor: "#f97316",
+      pointBorderColor: "#f97316",
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+    },
+    {
+      label: "Gastos",
+      data: gastos,
+      borderColor: "#ef4444", // rojo
+      backgroundColor: "#ef4444",
+      pointBackgroundColor: "#ef4444",
+      pointBorderColor: "#ef4444",
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+    },
+  ],
+};
 
-  const beneficioChart = {
-    labels,
-    datasets: [
-      {
-        label: "Beneficio neto",
-        data: beneficioNeto,
-        tension: 0.3,
-      },
-    ],
-  };
+const beneficioChart = {
+  labels,
+  datasets: [
+    {
+      label: "Beneficio neto",
+      data: beneficioNeto,
+      borderColor: "#2563eb", // azul
+      backgroundColor: "#2563eb",
+      pointBackgroundColor: "#2563eb",
+      pointBorderColor: "#2563eb",
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+    },
+  ],
+};
 
   if (loading) {
     return (
