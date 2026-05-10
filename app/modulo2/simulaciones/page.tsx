@@ -9,6 +9,7 @@ import {
   ExternalLink,
   FolderOpen,
   Loader2,
+  PlusCircle,
   RefreshCcw,
   Search,
 } from "lucide-react";
@@ -103,14 +104,24 @@ export default function MenuSimulacionesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={cargarSimulaciones}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-        >
-          <RefreshCcw size={18} />
-          Recargar
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+  <Link
+    href="/modulo2"
+    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-800"
+  >
+    <PlusCircle size={18} />
+    Nueva simulación
+  </Link>
+
+  <button
+    type="button"
+    onClick={cargarSimulaciones}
+    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+  >
+    <RefreshCcw size={18} />
+    Recargar
+  </button>
+</div>
       </section>
 
       <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -145,11 +156,30 @@ export default function MenuSimulacionesPage() {
         </div>
       )}
 
-      {!cargando && !error && simulacionesFiltradas.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          No hay simulaciones guardadas para esta empresa.
-        </div>
-      )}
+     {!cargando && !error && simulacionesFiltradas.length === 0 && (
+  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
+      <PlusCircle size={32} />
+    </div>
+
+    <h2 className="text-xl font-bold text-[#07133b]">
+      No hay simulaciones guardadas
+    </h2>
+
+    <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+      Crea una nueva simulación para proyectar ventas, costos, gastos y beneficio
+      neto de la empresa activa.
+    </p>
+
+    <Link
+      href="/modulo2"
+      className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white transition hover:bg-blue-800"
+    >
+      <PlusCircle size={18} />
+      Crear nueva simulación
+    </Link>
+  </div>
+)}
 
       {!cargando && !error && simulacionesFiltradas.length > 0 && (
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">

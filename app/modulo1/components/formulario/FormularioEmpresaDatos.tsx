@@ -23,14 +23,17 @@ const FormularioEmpresaDatos = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    setEmpresaData({
-      ...empresaData,
+    setEmpresaData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    console.log('SE EJECUTÓ EL SUBMIT DE REACT');
+    console.log('Datos enviados:', empresaData);
 
     try {
       setIsSubmitting(true);
@@ -39,25 +42,30 @@ const FormularioEmpresaDatos = () => {
 
       console.log('Respuesta de la creación de empresa:', response);
 
-      if (response && Object.keys(response).length > 0) {
-        const empresaId = response.empresa_id;
-
-        console.log('empresa_id obtenida:', empresaId);
-
-        Cookies.set('empresa_id', empresaId, {
-          expires: 7,
-          path: '/',
-        });
-
-        const cookieValue = Cookies.get('empresa_id');
-        console.log("Valor de la cookie 'empresa_id':", cookieValue);
-
-        alert('Empresa registrada con éxito');
-
-        router.push('/modulo1/dashboard');
-      } else {
+      if (!response || !response.empresa_id) {
+        console.error('Respuesta inválida al crear empresa:', response);
         alert('Hubo un error al registrar la empresa');
+        return;
       }
+
+      const empresaId = response.empresa_id;
+
+      Cookies.set('empresa_id', String(empresaId), {
+        expires: 7,
+        path: '/',
+      });
+
+      Cookies.set('empresa_nombre', response.nombre, {
+        expires: 7,
+        path: '/',
+      });
+
+      console.log("Cookie empresa_id:", Cookies.get('empresa_id'));
+      console.log("Cookie empresa_nombre:", Cookies.get('empresa_nombre'));
+
+      alert('Empresa registrada con éxito');
+
+      router.push('/modulo1/dashboard');
     } catch (error) {
       console.error('Error en la solicitud:', error);
       alert('Hubo un error al registrar la empresa');

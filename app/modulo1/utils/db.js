@@ -1,34 +1,38 @@
-// app/modulo1/utils/db.js
+  // app/modulo1/utils/db.js
+
 import supabase from "../../lib/supabase";
 
 export const createEmpresa = async (data) => {
+  const payload = {
+    nombre: data.nombre,
+    rfc: data.rfc,
+    fecha_creacion: data.fecha_creacion,
+    sector: data.sector,
+    direccion: data.direccion,
+  };
+
+  console.log("Datos que se enviarán a Supabase:", payload);
+
   const { data: newEmpresa, error } = await supabase
     .from("empresas")
-    .insert([{
-      nombre: data.nombre,
-      rfc: data.rfc,
-      fecha_creacion: data.fecha_creacion,
-      sector: data.sector,
-      direccion: data.direccion,
-    }])
-    .select();  // Agregamos `.select()` para asegurarnos de obtener los registros insertados
+    .insert([payload])
+    .select("empresa_id, nombre, rfc, fecha_creacion, sector, direccion")
+    .single();
 
   if (error) {
     console.error("Error inserting company data:", error);
-    return null;
-  }    
-
-  // Verificación de la respuesta
-  console.log("Empresa registrada:", newEmpresa[0].empresa_id);
-
-  // Asegurarse de que la respuesta contiene un registro válido con un `empresa_id`
-  if (newEmpresa && newEmpresa[0]?.empresa_id) {
-    return newEmpresa[0];  // Retornamos el primer registro insertado (suponiendo que solo insertamos uno)
+    throw error;
   }
 
-  return null;
-};
+  console.log("Empresa registrada en Supabase:", newEmpresa);
 
+  if (!newEmpresa || !newEmpresa.empresa_id) {
+    console.error("Supabase no devolvió empresa_id:", newEmpresa);
+    return null;
+  }
+
+  return newEmpresa;
+};
 
 
 export const createRegistroMensual = async (empresaId, data) => {

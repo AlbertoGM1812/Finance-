@@ -1,10 +1,17 @@
 // lib/supabase.js
 import { createClient } from '@supabase/supabase-js';
 
-// Aquí irán tus credenciales de Supabase
-const supabaseUrl = 'https://faxscagizitayrqnzymi.supabase.co';
-const supabaseKey = 'sb_publishable_uEq2lqCJ3km5ZZz4Eoc4mA_RerJxZP0'; // Obtén esto desde el panel de Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
+}
+
+if (!supabaseKey) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default supabase;
-
