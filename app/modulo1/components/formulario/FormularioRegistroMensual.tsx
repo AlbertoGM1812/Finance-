@@ -2,9 +2,10 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Cookies from 'js-cookie';
 import { createRegistroMensual } from '../../utils/db';
+import { useRouter } from 'next/navigation';
 
 type RegistroData = {
   mes: string;
@@ -25,8 +26,11 @@ const toNumber = (value: string) => {
 };
 
 const FormularioRegistroMensual = () => {
-  const empresaId = Cookies.get('empresa_id');
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [cookieCargada, setCookieCargada] = useState(false);
 
+  const router = useRouter();
+  
   const [registroData, setRegistroData] = useState<RegistroData>({
     mes: '',
     ventas: '',
@@ -42,6 +46,12 @@ const FormularioRegistroMensual = () => {
     texto: string;
   } | null>(null);
 
+  useEffect(() => {
+    const empresaIdCookie = Cookies.get('empresa_id') ?? null;
+    setEmpresaId(empresaIdCookie);
+    setCookieCargada(true);
+  }, []);
+
   const calcularBeneficio = (ventas: string, costos: string, gastos: string) => {
     const v = toNumber(ventas);
     const c = toNumber(costos);
@@ -49,14 +59,6 @@ const FormularioRegistroMensual = () => {
 
     return v - c - g;
   };
-
-  const beneficioCalculado = useMemo(() => {
-    return calcularBeneficio(
-      registroData.ventas,
-      registroData.costos,
-      registroData.gastos
-    );
-  }, [registroData.ventas, registroData.costos, registroData.gastos]);
 
   const margenNeto = useMemo(() => {
     const ventas = toNumber(registroData.ventas);
@@ -66,10 +68,6 @@ const FormularioRegistroMensual = () => {
 
     return beneficio / ventas;
   }, [registroData.ventas, registroData.beneficio_neto]);
-
-  const puntoEquilibrio = useMemo(() => {
-    return toNumber(registroData.costos) + toNumber(registroData.gastos);
-  }, [registroData.costos, registroData.gastos]);
 
   const estadoFinanciero = useMemo(() => {
     const beneficio = toNumber(registroData.beneficio_neto);
@@ -168,6 +166,14 @@ const FormularioRegistroMensual = () => {
     e.preventDefault();
     setMensaje(null);
 
+    if (!cookieCargada) {
+      setMensaje({
+        tipo: 'error',
+        texto: 'Espera un momento. Aún se está cargando la empresa activa.',
+      });
+      return;
+    }
+
     if (!empresaId) {
       setMensaje({
         tipo: 'error',
@@ -202,18 +208,20 @@ const FormularioRegistroMensual = () => {
       console.log('Respuesta del servidor:', response);
 
       if (response) {
-        setMensaje({
-          tipo: 'success',
-          texto: 'Registro mensual guardado con éxito.',
-        });
+  setMensaje({
+    tipo: 'success',
+    texto: 'Registro mensual guardado con éxito. Redirigiendo al dashboard...',
+  });
 
-        limpiarFormulario();
-      } else {
-        setMensaje({
-          tipo: 'error',
-          texto: 'Hubo un error al guardar el registro mensual.',
-        });
-      }
+  limpiarFormulario();
+
+  router.push('/modulo1/dashboard');
+} else {
+  setMensaje({
+    tipo: 'error',
+    texto: 'Hubo un error al guardar el registro mensual.',
+  });
+}
     } catch (error) {
       console.error('Error en la solicitud:', error);
 
@@ -227,31 +235,36 @@ const FormularioRegistroMensual = () => {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
+    <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
       <section className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-2 text-sm font-medium uppercase tracking-[0.25em] text-cyan-400">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.25em] text-cyan-600">
               Módulo 1
             </p>
 
-            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
               Registro mensual
             </h1>
 
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
               Captura ventas, costos y gastos del mes. El beneficio neto se
-              calcula automáticamente, pero puedes ajustarlo manualmente si tu
-              operación requiere una corrección contable.
+              calcula automáticamente, pero puedes editarlo manualmente si
+              necesitas hacer un ajuste contable.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-5 py-4 shadow-xl shadow-black/20">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
               Empresa activa
             </p>
-            <p className="mt-1 text-lg font-semibold text-white">
-              {empresaId ? `ID ${empresaId}` : 'No detectada'}
+
+            <p className="mt-1 text-lg font-semibold text-slate-950">
+              {!cookieCargada
+                ? 'Cargando...'
+                : empresaId
+                ? `ID ${empresaId}`
+                : 'No detectada'}
             </p>
           </div>
         </div>
@@ -260,8 +273,8 @@ const FormularioRegistroMensual = () => {
           <div
             className={`mb-6 rounded-2xl border px-5 py-4 text-sm ${
               mensaje.tipo === 'success'
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                : 'border-red-500/30 bg-red-500/10 text-red-300'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-red-200 bg-red-50 text-red-700'
             }`}
           >
             {mensaje.texto}
@@ -271,14 +284,15 @@ const FormularioRegistroMensual = () => {
         <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
           <form
             onSubmit={handleSubmit}
-            className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 backdrop-blur"
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
           >
-            <div className="mb-6 flex items-center justify-between border-b border-slate-800 pb-5">
+            <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-5">
               <div>
-                <h2 className="text-xl font-semibold text-white">
+                <h2 className="text-xl font-semibold text-slate-950">
                   Datos del mes
                 </h2>
-                <p className="mt-1 text-sm text-slate-400">
+
+                <p className="mt-1 text-sm text-slate-500">
                   Registra la información financiera mensual.
                 </p>
               </div>
@@ -294,7 +308,7 @@ const FormularioRegistroMensual = () => {
               <div className="md:col-span-2">
                 <label
                   htmlFor="mes"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 block text-sm font-medium text-slate-700"
                 >
                   Mes del registro
                 </label>
@@ -306,14 +320,14 @@ const FormularioRegistroMensual = () => {
                   value={registroData.mes}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="ventas"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 block text-sm font-medium text-slate-700"
                 >
                   Ventas
                 </label>
@@ -328,14 +342,14 @@ const FormularioRegistroMensual = () => {
                   onChange={handleChange}
                   required
                   placeholder="Ej. 25000"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="costos"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 block text-sm font-medium text-slate-700"
                 >
                   Costos
                 </label>
@@ -350,14 +364,14 @@ const FormularioRegistroMensual = () => {
                   onChange={handleChange}
                   required
                   placeholder="Ej. 12000"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="gastos"
-                  className="mb-2 block text-sm font-medium text-slate-300"
+                  className="mb-2 block text-sm font-medium text-slate-700"
                 >
                   Gastos
                 </label>
@@ -372,7 +386,7 @@ const FormularioRegistroMensual = () => {
                   onChange={handleChange}
                   required
                   placeholder="Ej. 6000"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>
 
@@ -380,13 +394,13 @@ const FormularioRegistroMensual = () => {
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <label
                     htmlFor="beneficio_neto"
-                    className="block text-sm font-medium text-slate-300"
+                    className="block text-sm font-medium text-slate-700"
                   >
                     Beneficio neto
                   </label>
 
                   {beneficioEditadoManual && (
-                    <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[11px] font-medium text-amber-300">
+                    <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
                       Editado manualmente
                     </span>
                   )}
@@ -401,24 +415,24 @@ const FormularioRegistroMensual = () => {
                   onChange={handleChange}
                   required
                   placeholder="Se calcula automáticamente"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
                 />
 
                 <button
                   type="button"
                   onClick={recalcularBeneficio}
-                  className="mt-2 text-xs font-medium text-cyan-300 transition hover:text-cyan-200"
+                  className="mt-2 text-xs font-semibold text-cyan-600 transition hover:text-cyan-700"
                 >
                   Recalcular con ventas - costos - gastos
                 </button>
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 border-t border-slate-800 pt-6 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-2xl bg-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? 'Guardando...' : 'Guardar registro'}
               </button>
@@ -426,7 +440,7 @@ const FormularioRegistroMensual = () => {
               <button
                 type="button"
                 onClick={limpiarFormulario}
-                className="rounded-2xl border border-slate-700 px-6 py-3 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800"
+                className="rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
               >
                 Limpiar
               </button>
@@ -434,16 +448,16 @@ const FormularioRegistroMensual = () => {
           </form>
 
           <aside className="space-y-5">
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-black/30">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
-                Vista rápida
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-600">
+                Resultado del mes
               </p>
 
-              <h2 className="mt-3 text-2xl font-bold text-white">
+              <h2 className="mt-3 text-3xl font-bold text-slate-950">
                 {moneyFormatter.format(toNumber(registroData.beneficio_neto))}
               </h2>
 
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-slate-500">
                 Beneficio neto registrado para el mes seleccionado.
               </p>
 
@@ -451,52 +465,41 @@ const FormularioRegistroMensual = () => {
                 className={`mt-5 rounded-2xl border px-4 py-3 ${estadoFinanciero.className}`}
               >
                 <p className="text-sm font-semibold">{estadoFinanciero.texto}</p>
+
                 <p className="mt-1 text-xs opacity-90">
                   {estadoFinanciero.descripcion}
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Beneficio automático
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+                Margen neto
+              </p>
+
+              <p className="mt-4 text-4xl font-bold text-slate-950">
+                {(margenNeto * 100).toFixed(2)}%
+              </p>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Porcentaje de las ventas que queda como beneficio neto.
+              </p>
+
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Interpretación
                 </p>
 
-                <p className="mt-2 text-xl font-bold text-white">
-                  {moneyFormatter.format(beneficioCalculado)}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Fórmula: ventas - costos - gastos.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Margen neto
-                </p>
-
-                <p className="mt-2 text-xl font-bold text-white">
-                  {(margenNeto * 100).toFixed(2)}%
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Beneficio neto dividido entre ventas.
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Punto de equilibrio simple
-                </p>
-
-                <p className="mt-2 text-xl font-bold text-white">
-                  {moneyFormatter.format(puntoEquilibrio)}
-                </p>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Ventas mínimas para cubrir costos y gastos.
+                <p className="mt-2 text-sm leading-6 text-slate-700">
+                  {margenNeto > 0
+                    ? `Por cada $100 de ventas, la empresa conserva aproximadamente $${(
+                        margenNeto * 100
+                      ).toFixed(2)} como beneficio neto.`
+                    : margenNeto === 0
+                    ? 'La empresa está en punto neutral: no genera utilidad, pero tampoco pérdida.'
+                    : `Por cada $100 de ventas, la empresa pierde aproximadamente $${Math.abs(
+                        margenNeto * 100
+                      ).toFixed(2)}.`}
                 </p>
               </div>
             </div>

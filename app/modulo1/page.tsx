@@ -6,7 +6,6 @@ import FormularioEmpresaDatos from './components/formulario/FormularioEmpresaDat
 const Page = () => {
   return (
     <div>
-      <h1>Registro de Empresa</h1>
       <FormularioEmpresaDatos />
     </div>
   );
